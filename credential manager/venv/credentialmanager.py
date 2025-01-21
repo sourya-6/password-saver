@@ -17,6 +17,14 @@ def load_default_credentials():
     if not os.path.exists("credentials.json"):
         with open("credentials.json", "w") as f:
             json.dump(default_credentials, f, indent=4)
+    
+    fake_credentials = {
+        "Social": {"username": "fake_user", "password": "fakepass"},
+        "Game": {"username": "gamer123", "password": "gamepass"}
+    }
+    if not os.path.exists("fake_credentials.json"):
+        with open("fake_credentials.json", "w") as f:
+            json.dump(fake_credentials, f, indent=4)
 
 # Function to check passkeys and navigate accordingly
 def check_passkey():
@@ -30,7 +38,7 @@ def check_passkey():
             frame_main.pack(fill=tk.BOTH, expand=True)
         else:
             frame_default.pack(fill=tk.BOTH, expand=True)
-            show_saved_passwords()
+            show_saved_passwords(fake=True)
 
 # Function to toggle password visibility
 def toggle_password(entry, button):
@@ -41,14 +49,19 @@ def toggle_password(entry, button):
         entry.config(show='*')
         button.config(text='👁')
 
+# Function to exit application
+def exit_application():
+    root.destroy()
+
 # Function to display stored credentials one at a time
-def show_saved_passwords():
+def show_saved_passwords(fake=False):
     global current_index
     for widget in frame_saved_credentials.winfo_children():
         widget.destroy()
 
-    if os.path.exists("credentials.json"):
-        with open("credentials.json", "r") as f:
+    filename = "fake_credentials.json" if fake else "credentials.json"
+    if os.path.exists(filename):
+        with open(filename, "r") as f:
             credentials = json.load(f)
     else:
         credentials = {}
@@ -76,6 +89,49 @@ def show_saved_passwords():
     
     frame_saved_credentials.pack(fill=tk.BOTH, expand=True)
 
+# Function to create a new password
+def create_new_password():
+    def save_new_password():
+        title = entry_title.get().strip()
+        username = entry_username.get().strip()
+        password = entry_password.get().strip()
+        
+        if not title or not username or not password:
+            messagebox.showerror("Error", "All fields are required!")
+            return
+        
+        if os.path.exists("credentials.json"):
+            with open("credentials.json", "r") as f:
+                credentials = json.load(f)
+        else:
+            credentials = {}
+        
+        credentials[title] = {"username": username, "password": password}
+        
+        with open("credentials.json", "w") as f:
+            json.dump(credentials, f, indent=4)
+        
+        messagebox.showinfo("Success", "Password saved successfully!")
+        new_password_window.destroy()
+        show_saved_passwords()
+    
+    new_password_window = tk.Toplevel(root)
+    new_password_window.title("Create New Password")
+    
+    tk.Label(new_password_window, text="Title:").grid(row=0, column=0)
+    entry_title = tk.Entry(new_password_window)
+    entry_title.grid(row=0, column=1)
+    
+    tk.Label(new_password_window, text="Username:").grid(row=1, column=0)
+    entry_username = tk.Entry(new_password_window)
+    entry_username.grid(row=1, column=1)
+    
+    tk.Label(new_password_window, text="Password:").grid(row=2, column=0)
+    entry_password = tk.Entry(new_password_window, show="*")
+    entry_password.grid(row=2, column=1)
+    
+    tk.Button(new_password_window, text="Save", command=save_new_password).grid(row=3, columnspan=2)
+
 # Function to show next password
 def show_next_password():
     global current_index
@@ -92,35 +148,6 @@ def show_next_password():
     
     show_saved_passwords()
 
-# Function to create virtual keyboard in the same tab
-def show_virtual_keyboard(parent):
-    keys = [
-        '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
-        'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p',
-        'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l',
-        'z', 'x', 'c', 'v', 'b', 'n', 'm'
-    ]
-    
-    entry_focus = root.focus_get()
-    
-    def press_key(key):
-        if entry_focus:
-            entry_focus.insert(tk.END, key)
-    
-    keyboard_frame = tk.Frame(parent)
-    keyboard_frame.pack()
-    
-    row, col = 0, 0
-    for key in keys:
-        tk.Button(keyboard_frame, text=key, command=lambda k=key: press_key(k)).grid(row=row, column=col, padx=5, pady=5)
-        col += 1
-        if col > 9:
-            col = 0
-            row += 1
-    
-    tk.Button(keyboard_frame, text='Space', command=lambda: press_key(' ')).grid(row=row+1, column=0, columnspan=5, padx=5, pady=5)
-    tk.Button(keyboard_frame, text='Backspace', command=lambda: entry_focus.delete(len(entry_focus.get()) - 1, tk.END)).grid(row=row+1, column=5, columnspan=5, padx=5, pady=5)
-
 root = tk.Tk()
 root.title("Password Manager")
 root.geometry("600x500")
@@ -132,19 +159,25 @@ label_passkey = tk.Label(frame_passkey, text="Enter Passkey:")
 label_passkey.pack()
 entry_passkey = tk.Entry(frame_passkey, width=10, show="*")
 entry_passkey.pack()
-button_virtual_keyboard = tk.Button(frame_passkey, text="⌨", command=lambda: show_virtual_keyboard(frame_passkey))
-button_virtual_keyboard.pack()
 button_submit_passkey = tk.Button(frame_passkey, text="Submit", command=check_passkey)
 button_submit_passkey.pack()
 
 frame_main = tk.Frame(root)
+button_create_new = tk.Button(frame_main, text="Create New", command=create_new_password)
+button_create_new.pack()
 button_show_saved = tk.Button(frame_main, text="Show Saved Passwords", command=show_saved_passwords)
 button_show_saved.pack()
+button_exit = tk.Button(frame_main, text="Exit", command=exit_application)
+button_exit.pack()
 frame_saved_credentials = tk.Frame(frame_main)
 
 frame_default = tk.Frame(root)
-button_show_default = tk.Button(frame_default, text="Show Default Passwords", command=show_saved_passwords)
+button_create_default = tk.Button(frame_default, text="Create New", command=create_new_password)
+button_create_default.pack()
+button_show_default = tk.Button(frame_default, text="Show Saved Passwords", command=lambda: show_saved_passwords(fake=True))
 button_show_default.pack()
+button_exit_default = tk.Button(frame_default, text="Exit", command=exit_application)
+button_exit_default.pack()
 frame_saved_credentials.pack()
 
 load_default_credentials()
