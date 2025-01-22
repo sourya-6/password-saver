@@ -6,18 +6,24 @@ import os
 PASSKEY1 = "67890"
 PASSKEY2 = "12345"
 entered_passkeys = []
-current_index = 0
+real_index = 0
+fake_index = 0
+
+# Initialize Tkinter window
+root = tk.Tk()
+root.title("Password Manager")
+root.geometry("600x500")
 
 # Load default credentials
 def load_default_credentials():
-    default_credentials = {
+    real_credentials = {
         "Email": {"username": "user@example.com", "password": "pass123"},
         "Bank": {"username": "user_bank", "password": "securepass"}
     }
     if not os.path.exists("credentials.json"):
         with open("credentials.json", "w") as f:
-            json.dump(default_credentials, f, indent=4)
-    
+            json.dump(real_credentials, f, indent=4)
+
     fake_credentials = {
         "Social": {"username": "fake_user", "password": "fakepass"},
         "Game": {"username": "gamer123", "password": "gamepass"}
@@ -26,7 +32,7 @@ def load_default_credentials():
         with open("fake_credentials.json", "w") as f:
             json.dump(fake_credentials, f, indent=4)
 
-# Function to check passkeys and navigate accordingly
+# Function to check passkeys
 def check_passkey():
     entered_key = entry_passkey.get()
     entry_passkey.delete(0, tk.END)
@@ -35,10 +41,10 @@ def check_passkey():
     if len(entered_passkeys) == 2:
         frame_passkey.pack_forget()
         if entered_passkeys[0] == PASSKEY1 and entered_passkeys[1] == PASSKEY2:
-            frame_main.pack(fill=tk.BOTH, expand=True)
+            frame_real.pack(fill=tk.BOTH, expand=True)
         else:
-            frame_default.pack(fill=tk.BOTH, expand=True)
-            show_saved_passwords_fake()
+            frame_fake.pack(fill=tk.BOTH, expand=True)
+            show_fake_passwords()
 
 # Function to toggle password visibility
 def toggle_password(entry, button):
@@ -53,10 +59,15 @@ def toggle_password(entry, button):
 def exit_application():
     root.destroy()
 
-# Function to display real stored credentials one at a time
-def show_saved_passwords_real():
-    global current_index
-    for widget in frame_saved_credentials.winfo_children():
+# === REAL CREDENTIALS ===
+def show_real_passwords():
+    global real_index
+    real_index = 0
+    display_real_credentials()
+
+def display_real_credentials():
+    global real_index
+    for widget in frame_saved_real.winfo_children():
         widget.destroy()
 
     if os.path.exists("credentials.json"):
@@ -70,28 +81,48 @@ def show_saved_passwords_real():
         messagebox.showinfo("No Data", "No real credentials saved yet.")
         return
 
-    title = keys[current_index]
+    title = keys[real_index]
     creds = credentials[title]
-    
-    tk.Label(frame_saved_credentials, text=title, width=20).grid(row=0, column=0, padx=5, pady=5)
-    tk.Label(frame_saved_credentials, text=creds['username'], width=20).grid(row=0, column=1, padx=5, pady=5)
-    
-    password_entry = tk.Entry(frame_saved_credentials, width=20, show='*')
+
+    tk.Label(frame_saved_real, text=title, width=20).grid(row=0, column=0, padx=5, pady=5)
+    tk.Label(frame_saved_real, text=creds['username'], width=20).grid(row=0, column=1, padx=5, pady=5)
+
+    password_entry = tk.Entry(frame_saved_real, width=20, show='*')
     password_entry.insert(0, creds['password'])
     password_entry.grid(row=0, column=2, padx=5, pady=5)
-    
-    toggle_button = tk.Button(frame_saved_credentials, text='👁', command=lambda: toggle_password(password_entry, toggle_button))
-    toggle_button.grid(row=0, column=3, padx=5, pady=5)
-    
-    next_button = tk.Button(frame_saved_credentials, text='➡', command=show_next_password_real)
-    next_button.grid(row=0, column=4, padx=5, pady=5)
-    
-    frame_saved_credentials.pack(fill=tk.BOTH, expand=True)
 
-# Function to display fake stored credentials one at a time
-def show_saved_passwords_fake():
-    global current_index
-    for widget in frame_saved_credentials.winfo_children():
+    toggle_button = tk.Button(frame_saved_real, text='👁', command=lambda: toggle_password(password_entry, toggle_button))
+    toggle_button.grid(row=0, column=3, padx=5, pady=5)
+
+    next_button = tk.Button(frame_saved_real, text='➡', command=next_real_password)
+    next_button.grid(row=0, column=4, padx=5, pady=5)
+
+    frame_saved_real.pack(fill=tk.BOTH, expand=True)
+
+def next_real_password():
+    global real_index
+    if os.path.exists("credentials.json"):
+        with open("credentials.json", "r") as f:
+            credentials = json.load(f)
+    else:
+        credentials = {}
+
+    if real_index < len(credentials) - 1:
+        real_index += 1
+    else:
+        real_index = 0
+
+    display_real_credentials()
+
+# === FAKE CREDENTIALS ===
+def show_fake_passwords():
+    global fake_index
+    fake_index = 0
+    display_fake_credentials()
+
+def display_fake_credentials():
+    global fake_index
+    for widget in frame_saved_fake.winfo_children():
         widget.destroy()
 
     if os.path.exists("fake_credentials.json"):
@@ -105,116 +136,40 @@ def show_saved_passwords_fake():
         messagebox.showinfo("No Data", "No fake credentials saved yet.")
         return
 
-    title = keys[current_index]
+    title = keys[fake_index]
     creds = credentials[title]
-    
-    tk.Label(frame_saved_credentials, text=title, width=20).grid(row=0, column=0, padx=5, pady=5)
-    tk.Label(frame_saved_credentials, text=creds['username'], width=20).grid(row=0, column=1, padx=5, pady=5)
-    
-    password_entry = tk.Entry(frame_saved_credentials, width=20, show='*')
+
+    tk.Label(frame_saved_fake, text=title, width=20).grid(row=0, column=0, padx=5, pady=5)
+    tk.Label(frame_saved_fake, text=creds['username'], width=20).grid(row=0, column=1, padx=5, pady=5)
+
+    password_entry = tk.Entry(frame_saved_fake, width=20, show='*')
     password_entry.insert(0, creds['password'])
     password_entry.grid(row=0, column=2, padx=5, pady=5)
-    
-    toggle_button = tk.Button(frame_saved_credentials, text='👁', command=lambda: toggle_password(password_entry, toggle_button))
+
+    toggle_button = tk.Button(frame_saved_fake, text='👁', command=lambda: toggle_password(password_entry, toggle_button))
     toggle_button.grid(row=0, column=3, padx=5, pady=5)
-    
-    next_button = tk.Button(frame_saved_credentials, text='➡', command=show_next_password_fake)
+
+    next_button = tk.Button(frame_saved_fake, text='➡', command=next_fake_password)
     next_button.grid(row=0, column=4, padx=5, pady=5)
-    
-    frame_saved_credentials.pack(fill=tk.BOTH, expand=True)
 
-# Function to create a new password for real credentials
-def create_new_password_real():
-    create_new_password(fake=False)
+    frame_saved_fake.pack(fill=tk.BOTH, expand=True)
 
-# Function to create a new password for fake credentials
-def create_new_password_fake():
-    create_new_password(fake=True)
-
-# Generic function to create a new password
-def create_new_password(fake=False):
-    def save_new_password():
-        title = entry_title.get().strip()
-        username = entry_username.get().strip()
-        password = entry_password.get().strip()
-        
-        if not title or not username or not password:
-            messagebox.showerror("Error", "All fields are required!")
-            return
-        
-        filename = "fake_credentials.json" if fake else "credentials.json"
-        
-        if os.path.exists(filename):
-            with open(filename, "r") as f:
-                credentials = json.load(f)
-        else:
-            credentials = {}
-        
-        credentials[title] = {"username": username, "password": password}
-        
-        with open(filename, "w") as f:
-            json.dump(credentials, f, indent=4)
-        
-        messagebox.showinfo("Success", "Password saved successfully!")
-        new_password_window.destroy()
-        if fake:
-            show_saved_passwords_fake()
-        else:
-            show_saved_passwords_real()
-    
-    new_password_window = tk.Toplevel(root)
-    new_password_window.title("Create New Password")
-    
-    tk.Label(new_password_window, text="Title:").grid(row=0, column=0)
-    entry_title = tk.Entry(new_password_window)
-    entry_title.grid(row=0, column=1)
-    
-    tk.Label(new_password_window, text="Username:").grid(row=1, column=0)
-    entry_username = tk.Entry(new_password_window)
-    entry_username.grid(row=1, column=1)
-    
-    tk.Label(new_password_window, text="Password:").grid(row=2, column=0)
-    entry_password = tk.Entry(new_password_window, show="*")
-    entry_password.grid(row=2, column=1)
-    
-    tk.Button(new_password_window, text="Save", command=save_new_password).grid(row=3, columnspan=2)
-
-# Function to show next real password
-def show_next_password_real():
-    global current_index
-    if os.path.exists("credentials.json"):
-        with open("credentials.json", "r") as f:
-            credentials = json.load(f)
-    else:
-        credentials = {}
-    
-    if current_index < len(credentials) - 1:
-        current_index += 1
-    else:
-        current_index = 0
-    
-    show_saved_passwords_real()
-
-# Function to show next fake password
-def show_next_password_fake():
-    global current_index
+def next_fake_password():
+    global fake_index
     if os.path.exists("fake_credentials.json"):
         with open("fake_credentials.json", "r") as f:
             credentials = json.load(f)
     else:
         credentials = {}
-    
-    if current_index < len(credentials) - 1:
-        current_index += 1
+
+    if fake_index < len(credentials) - 1:
+        fake_index += 1
     else:
-        current_index = 0
-    
-    show_saved_passwords_fake()
+        fake_index = 0
 
-root = tk.Tk()
-root.title("Password Manager")
-root.geometry("600x500")
+    display_fake_credentials()
 
+# UI Design
 frame_passkey = tk.Frame(root)
 frame_passkey.pack()
 
@@ -225,23 +180,20 @@ entry_passkey.pack()
 button_submit_passkey = tk.Button(frame_passkey, text="Submit", command=check_passkey)
 button_submit_passkey.pack()
 
-frame_main = tk.Frame(root)
-button_create_new = tk.Button(frame_main, text="Create New (Real)", command=create_new_password_real)
-button_create_new.pack()
-button_show_saved = tk.Button(frame_main, text="Show Saved (Real)", command=show_saved_passwords_real)
-button_show_saved.pack()
-button_exit = tk.Button(frame_main, text="Exit", command=exit_application)
-button_exit.pack()
-frame_saved_credentials = tk.Frame(frame_main)
+frame_real = tk.Frame(root)
+tk.Button(frame_real, text="Create New", command=show_real_passwords).pack()
+tk.Button(frame_real, text="Show Saved Passwords", command=show_real_passwords).pack()
+tk.Button(frame_real, text="Exit", command=exit_application).pack()
+frame_saved_real = tk.Frame(frame_real)
 
-frame_default = tk.Frame(root)
-button_create_default = tk.Button(frame_default, text="Create New (Fake)", command=create_new_password_fake)
-button_create_default.pack()
-button_show_default = tk.Button(frame_default, text="Show Saved (Fake)", command=show_saved_passwords_fake)
-button_show_default.pack()
-button_exit_default = tk.Button(frame_default, text="Exit", command=exit_application)
-button_exit_default.pack()
-frame_saved_credentials.pack()
+frame_fake = tk.Frame(root)
+tk.Button(frame_fake, text="Create New", command=show_fake_passwords).pack()
+tk.Button(frame_fake, text="Show Saved Passwords", command=show_fake_passwords).pack()
+tk.Button(frame_fake, text="Exit", command=exit_application).pack()
+frame_saved_fake = tk.Frame(frame_fake)
 
+# Load credentials
 load_default_credentials()
+
+# Start Tkinter event loop
 root.mainloop()
